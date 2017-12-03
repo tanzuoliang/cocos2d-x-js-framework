@@ -96,7 +96,7 @@ tianyi.ViewBase = cc.Node.extend({
 			//配置事件
 			if(nodeBinding.hasOwnProperty("events")){
 				var events = nodeBinding.events;
-				
+
                 for(var key in event){
                     if(key == "onClick"){
                         //已经配了回调
