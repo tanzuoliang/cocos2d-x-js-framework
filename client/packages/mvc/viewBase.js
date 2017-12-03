@@ -1,9 +1,14 @@
 var tianyi = tianyi || {};
 
+/**
+ * 类属性
+ * RESOURCE_FILENAME : null,
+   RESOURCE_BINDING : null,
+ *  Example: RESOURCE_FILENAME = "main.json"
+ *  RESOURCE_BINDING = {"nameTf":{"varname":"","events":[{"onClick":true,"method},{"onTouch:"true}]}}
+ *
+ */
 tianyi.ViewBase = cc.Node.extend({
-	RESOURCE_FILENAME : null,
-	RESOURCE_BINDING : null,
-
 	lastClickTime : -1,
 	VALID_CLICK_DETAL : 500,
 
@@ -13,11 +18,11 @@ tianyi.ViewBase = cc.Node.extend({
 
 		defineProperty(this,"dispatcher",tianyi.events.IEvent.new());
 
-		if(this.RESOURCE_FILENAME != ""){
+		if(this.constructor.RESOURCE_FILENAME != null){
 			this.createResourceNode(this.RESOURCE_FILENAME);
 		}
 
-		if(this.RESOURCE_BINDING != ""){
+		if(this.constructor.RESOURCE_BINDING != null){
 			this.createResourceBinding(this.RESOURCE_BINDING);
 		}
 
@@ -79,6 +84,9 @@ tianyi.ViewBase = cc.Node.extend({
 			var nodeBinding = binding[nodeName];
 			if(nodeBinding.hasOwnProperty("varname")){
 				this[nodeBinding.varname] = node;
+			}
+			else{
+				this[nodeName] = node;
 			}
 
 			if(nodeBinding.hasOwnProperty("events")){
