@@ -1,7 +1,7 @@
-var tianyi = tianyi || {};
+var tz = tz || {};
 
 
-tianyi.TYAlert = tianyi.TYAnimatorView.extend({
+tz.TYAlert = tz.TYAnimatorView.extend({
     ctor : function (name) {
         this._super(name);
     }
@@ -10,15 +10,15 @@ tianyi.TYAlert = tianyi.TYAnimatorView.extend({
 /**
  * 弹框管理（同时只能存在一个）
  */
-tianyi.PopupManager = {
+tz.PopupManager = {
     showAlert : function (content,sureFun,cancelFun) {
         var su = function () {
-            sureFun();
+            sureFun && sureFun();
             LayerManager.removeLastView();
         };
 
         var cancel = function () {
-            cancelFun();
+            cancelFun && cancelFun();
             LayerManager.removeLastView();
         };
 

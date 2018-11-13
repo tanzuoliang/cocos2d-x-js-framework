@@ -1,11 +1,11 @@
 /**
- * Created by tianyi on 2017/11/16.
+ * Created by tz on 2017/11/16.
  */
-var tianyi = tianyi || {};
+var tz = tz || {};
 
 // tianyi.events.Model.GET = "get";
 
-tianyi.ModelBase = cc.Class.extend({
+tz.ModelBase = cc.Class.extend({
 
     /**
      *

@@ -1,17 +1,19 @@
-var tianyi = tianyi || {};
+var tz = tz || {};
 
-tianyi.ViewBase = cc.Node.extend({
+tz.ViewBase = cc.Node.extend({
 	RESOURCE_FILENAME : null,
 	RESOURCE_BINDING : null,
 
 	lastClickTime : -1,
 	VALID_CLICK_DETAL : 500,
+	
+	dispatcher : null,
 
 	ctor : function (name) {
 		this._super();
 		this._name = name;
 
-		defineProperty(this,"dispatcher",tianyi.events.IEvent.new());
+		defineProperty(this,"dispatcher",tz.events.IEvent.new());
 
 		if(this.RESOURCE_FILENAME != ""){
 			this.createResourceNode(this.RESOURCE_FILENAME);
@@ -77,8 +79,11 @@ tianyi.ViewBase = cc.Node.extend({
 			var node = ccui.helper.seekWidgetByName(this._resourceNode,nodeName);
 			cc.assert(node,"ViewBase.createResourceBinding - can not find node by the name with " + nodeName);
 			var nodeBinding = binding[nodeName];
-			if(nodeBinding.hasOwnProperty("varname")){
-				this[nodeBinding.varname] = node;
+			if(nodeBinding.hasOwnProperty("name")){
+				this[nodeBinding.name] = node;
+			}
+			else{
+				this[nodeName] = node;
 			}
 
 			if(nodeBinding.hasOwnProperty("events")){
@@ -197,7 +202,7 @@ tianyi.ViewBase = cc.Node.extend({
 
 
 //---------------------------- 动画对象 ----------------------
-tianyi.TYAnimatorView = tianyi.ViewBase.extend({
+tz.TYAnimatorView = tz.ViewBase.extend({
 
 	_animatorType : null,
 
@@ -215,7 +220,7 @@ tianyi.TYAnimatorView = tianyi.ViewBase.extend({
 });
 
 //----------------------------------  panel ------------------------
-tianyi.TYPanel = tianyi.TYAnimatorView.extend({
+tz.TYPanel = tz.TYAnimatorView.extend({
 
 	ctor : function (name) {
 		this._super(name);
@@ -225,7 +230,7 @@ tianyi.TYPanel = tianyi.TYAnimatorView.extend({
 
 
 //----------------------------------  window -------------------------
-tianyi.TYWindow = tianyi.TYAnimatorView.extend({
+tz.TYWindow = tz.TYAnimatorView.extend({
 	ctor : function (name) {
 		this._super(name);
 	}

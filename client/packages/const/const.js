@@ -1,10 +1,10 @@
 /**
- * Created by tianyi on 2017/11/16.
+ * Created by tz on 2017/11/16.
  */
-var tianyi = tianyi || {};
-tianyi.CONST = {};
+var tz = tz || {};
+tz.CONST = {};
 
-tianyi.CONST.LAYER_ADD_TYPE ={
+tz.CONST.LAYER_ADD_TYPE ={
     ALONE : 1,
     SHARE : 2
 };

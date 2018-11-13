@@ -1,14 +1,14 @@
 /**
- * Created by tianyi on 2017/11/17.
+ * Created by tz on 2017/11/17.
  */
 
-var tianyi = tianyi || {};
+var tz = tz || {};
 
 /**
  * 动画管理
  * @type {{}}
  */
-tianyi.AnimatorManager = {
+tz.AnimatorManager = {
     /**
      * 缩放
      * @param node 显示对象

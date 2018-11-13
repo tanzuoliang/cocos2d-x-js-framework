@@ -1,6 +1,6 @@
-var tianyi = tianyi || {};
+var tz = tz || {};
 
-tianyi.LayerManager = {
+tz.LayerManager = {
 	layerList : [],
 	curView : null,
 
@@ -11,10 +11,10 @@ tianyi.LayerManager = {
 	 */
 	addLayer : function (view,addType) {
 		switch (addType){
-			case tianyi.CONST.LAYER_ADD_TYPE.ALONE:
+			case tz.CONST.LAYER_ADD_TYPE.ALONE:
 				this.removeOldLayers();
 				break;
-			case tianyi.CONST.LAYER_ADD_TYPE.SHARE:
+			case tz.CONST.LAYER_ADD_TYPE.SHARE:
 				this.onFocusOut();
 				break;
 		}
