@@ -17,13 +17,73 @@ var component = component || {};
         last_p : 0,
         dir : null,
         innerContainer : null,
-        ctor : function () {
+        ctor : function (config) {
             this._super();
             this.addEventListener(this.onScrolling.bind(this));
             this.innerContainer = this.getInnerContainer();
             this.last_p = this.innerContainer.x;
             this.setScrollBarEnabled(false);
             this.setInertiaScrollEnabled(false);
+
+            //----------------------------------------------------------
+            this.hasBtns = false;
+            if(config){
+                this.leftBtn = config.leftBtn;
+                this.leftBtn && uicore.ComponentManager.registerClick(this.leftBtn,this.onLeftBtn.bind(this));
+
+                this.rightBtn = config.rightBtn;
+                this.rightBtn && uicore.ComponentManager.registerClick(this.rightBtn,this.onRightBtn.bind(this));
+
+                this.hasBtns = this.leftBtn && this.rightBtn;
+                if(this.hasBtns){
+                    this.leftBtn.visible = false;
+                }
+            }
+
+            this.moveStep = 0;
+            this.maxMoveStep = 0;
+        },
+
+
+        onLeftBtn : function () {
+            this.moveStep--;
+            this.updateBtnsAndScrollView(true);
+        },
+
+        onRightBtn : function () {
+            this.moveStep++;
+            this.updateBtnsAndScrollView(true);
+        },
+
+        hideBtns : function () {
+            if(this.hasBtns){
+                this.leftBtn.visible = false;
+                this.rightBtn.visible = false;
+                // cc.log("[tableview] first visible all btns ");
+            }
+        },
+
+        updateBtnsAndScrollView : function (reCalcPercent) {
+            if(this.hasBtns){
+
+
+                cc.log("[tableview] updateBtnsAndScrollView moveStep = " + this.moveStep + " max = " + this.maxMoveStep + " --- " + (reCalcPercent ? "yes" : "no"));
+
+                this.leftBtn.visible = true;
+                this.rightBtn.visible = true;
+
+                if(this.moveStep == 0){
+                    this.leftBtn.visible = false;
+                } else  if(this.moveStep == this.maxMoveStep){
+                    this.rightBtn.visible = false;
+                }
+
+                if(reCalcPercent){
+                    var p = this.moveStep * 100 / this.maxMoveStep;
+                    this.scrollToPercentHorizontal(p,0.1,false);
+                }
+            }
+
         },
 
         setDirection : function(dir){
@@ -48,13 +108,18 @@ var component = component || {};
         },
 
         onScrolling : function (sender,type) {
+
+            // cc.log("tableView wait stop type = " + type + "  " + cc.director.getTotalFrames());
+
             if (type == ccui.ScrollView.EVENT_AUTOSCROLL_ENDED ||
                 type == ccui.ScrollView.EVENT_ENDED) {
 
 
                 if(this.dir == ccui.ScrollView.DIR_HORIZONTAL){
                     if (Math.abs(this.last_p - this.innerContainer.x) > 1) {
-                        
+
+                        // cc.log("tableView stop immd11111");
+
                         var _x = this.innerContainer.x;
                         var col = Math.round(_x / this.itemWidth);
 
@@ -62,15 +127,21 @@ var component = component || {};
                         _x = Math.min(0, Math.max(_x, this.scrollWidth - this.innerWidth));
                         this.innerContainer.stopAllActions();
                         this.innerContainer.runAction(cc.sequence([
-                            cc.MoveTo(0.2, _x, 0),
+                            cc.MoveTo(0.1, _x, 0),
                             cc.callFunc(function () {
                                 this.last_p = this.innerContainer.x;
-                                this.onStopScroll();
+                                // cc.log("tableView stop immd2222");
+                                this.onStopScroll(col * -1);
                             }.bind(this))
                         ]));
+                    }else{
+                        // cc.log("tableView stop immd");
+                        this.onStopScroll(-1);
                     }
+
                 }
                 else if(this.dir == ccui.ScrollView.DIR_VERTICAL){
+                    // cc.log("[scrollView] last " + this.last_p);
                     if (Math.abs(this.last_p - this.innerContainer.y) > 1) {
                         
                         var _y = this.innerContainer.y;
@@ -80,27 +151,39 @@ var component = component || {};
                         _y = Math.min(0, Math.max(_y, this.scrollHeight - this.innerHeight));
                         this.innerContainer.stopAllActions();
                         this.innerContainer.runAction(cc.sequence([
-                            cc.MoveTo(0.2, 0, _y),
+                            cc.MoveTo(0.1, 0, _y),
                             cc.callFunc(function () {
 
                                 this.last_p = this.innerContainer.y;
-                                this.onStopScroll();
+                                this.onStopScroll(row * -1);
                             }.bind(this))
                         ]));
+                    }else{
+                        this.onStopScroll(-1);
                     }
                 }
 
 
             }
             else if (type == ccui.ScrollView.EVENT_CONTAINER_MOVED) {
-                this.innerContainer.stopAllActions();
+                // this.innerContainer.stopAllActions();
+                // signals.event.send("scrollView_scrolling");
+                this.hideBtns();
             }
         },
 
-        onStopScroll : function () {
+        onStopScroll : function (v) {
+            if(v != -1){
+                this.moveStep = v
+            }
 
+            this.updateBtnsAndScrollView(false);
         }
     });
+
+    component.ScrollView.create = function(config){
+        return new component.ScrollView(config);
+    }
 
 
     component.TableView = cc.Node.extend({
@@ -150,10 +233,14 @@ var component = component || {};
          */
         renderRows : 0,
 
+        renderCols : 0,
+
         /**
          * 总行数
          */
         totalRows : 0,
+
+        totalCols : 0,
 
         /**
          *显示物体超出可视区域的坐标偏移值
@@ -193,17 +280,21 @@ var component = component || {};
          */
         ctor : function (config) {
             this._super();
-            this.scroll = ccui.ScrollView.create();
+            // this.scroll = ccui.ScrollView.create();
+            this.scroll = component.ScrollView.create(config);
 
             // this.scroll.setDirection(ccui.ScrollView.DIR_VERTICAL);
+
+            this.dir = config.dir || ccui.ScrollView.DIR_VERTICAL;
+
             this.scroll.setTouchEnabled(true);
-            this.scroll.setDirection(ccui.ScrollView.DIR_VERTICAL);
+            this.scroll.setDirection(this.dir);
             this.scroll.setBounceEnabled(config.hasOwnProperty("bounce") ? config.bounce :true);
 
             this.scroll.setScrollBarEnabled(false);
 
             this.viewSize = config.viewSize;
-            this.scroll.setSize(this.viewSize.width,this.viewSize.height);
+            this.scroll.setSize(this.viewSize.width,this.viewSize.height,config.itemSize.width,config.itemSize.height);
             this.scrollBoundRect = cc.rect(0,0,this.viewSize.width,this.viewSize.height);
             this.addChild(this.scroll);
 
@@ -234,13 +325,25 @@ var component = component || {};
 
             this.extraSpace = config.extraSpace || 0;
             this.showAll = config.showAll || false;
-            !this.showAll && this.scroll.addEventListener(this.onScrolling.bind(this));
+            // !this.showAll && this.scroll.addEventListener(this.onScrolling.bind(this));
+
+
+            //是否需要调整修正坐标
+            this.modifyPosition = config.modify || false;
+            // this.scroll.setInertiaScrollEnabled(!this.modifyPosition);
+            this.scroll.addEventListener(this.onScrolling.bind(this));
+            // if(!this.modifyPosition){
+            //     this.scroll.addEventListener(this.onScrolling.bind(this));
+            // }
+
+            this.isRevert = config.revert || false;
 
             if(config.hasOwnProperty("data")){
                 this.setTableData(config.data);
             }
 
         },
+
 
         getContainer : function () {
             return this.scroll;
@@ -250,22 +353,48 @@ var component = component || {};
             return cc.size(this.worldSize.width,this.worldSize.height);
         },
 
-        onScrolling : function (sender,type) {
-            var now  = this.scroll.getInnerContainerPosition().y;
-            if(now > this.lastInnerPosY){
-                this.moveUp();
-            }
-            else if(now < this.lastInnerPosY){
-                this.moveDown();
-            }
+        getDataSize : function () {
+            return this.tableData.length;
+        },
 
-            this.lastInnerPosY = now;
+        onScrolling : function (sender,type) {
+            this.modifyPosition && this.scroll.onScrolling(sender,type);
+
+            if (type == ccui.ScrollView.EVENT_AUTOSCROLL_ENDED ||
+                type == ccui.ScrollView.EVENT_ENDED) {
+            }
+            else if(type == ccui.ScrollView.EVENT_SCROLLING){
+                this.updateItemsPosition();
+                // signals.event.send("scrollView_scrolling");
+            }
+        },
+
+        updateItemsPosition : function(){
+            if(this.dir == ccui.ScrollView.DIR_VERTICAL){
+                var now  = this.scroll.getInnerContainerPosition().y;
+                if(now > this.lastInnerPosY){
+                    this.moveUp();
+                }
+                else if(now < this.lastInnerPosY){
+                    this.moveDown();
+                }
+
+                this.lastInnerPosY = now;
+            }else{
+
+            }
         },
 
         onEnter : function () {
           this._super();
           // this.scheduleUpdate();
           // this.initItem();
+
+            // if(this.dir ==ccui.ScrollView.DIR_VERTICAL){
+            //     if(this.isRevert){
+            //         this.scroll.jumpToBottom();
+            //     }
+            // }
         },
 
 
@@ -291,6 +420,7 @@ var component = component || {};
                     item.y -= this.itemOffsetHeight;
                     item.__row__ += this.renderRows;
                     index = item.__row__ * this.viewCols + item.__col__;
+                    item.__recordePosition && item.__recordePosition();
                     item.setData && item.setData(this.tableData[index],index);
                 }
             }
@@ -306,6 +436,7 @@ var component = component || {};
                     item.y += this.itemOffsetHeight;
                     item.__row__ -= this.renderRows;
                     index = item.__row__ * this.viewCols + item.__col__;
+                    item.__recordePosition && item.__recordePosition();
                     item.setData && item.setData(this.tableData[index],index);
                 }
             }
@@ -338,11 +469,15 @@ var component = component || {};
 
 
         setTableData : function (data,defaultIndex) {
+            if(!this.isNative())return;
             this.defaultIndex = defaultIndex || 0;
             if(this.currentSelectItem){
                 this.currentSelectItem.onUnselect();
                 this.currentSelectItem = null;
             }
+
+
+            // this.scroll && this.scroll.unscheduleAllCallbacks();
 
             this.tableData = data;
             var len = this.itemsArr.length;
@@ -357,24 +492,57 @@ var component = component || {};
             }
 
             if(data){
-                this.totalRows = Math.ceil(this.tableData.length / this.viewCols);
-                if(this.showAll){this.viewRows = this.totalRows}
-                this.worldSize = cc.size(this.viewSize.width,Math.max(this.itemSize.height * this.totalRows + this.extraSpace,this.viewSize.height));
+
+                cc.log("[tableView] dir " + this.dir);
+
+                if(this.dir == ccui.ScrollView.DIR_VERTICAL){
+                    this.totalRows = Math.ceil(this.tableData.length / this.viewCols);
+                    this.scroll.maxMoveStep = this.totalRows - this.viewRows;
+                    if(this.showAll){this.viewRows = this.totalRows}
+                    this.worldSize = cc.size(this.viewSize.width,Math.max(this.itemSize.height * this.totalRows + this.extraSpace,this.viewSize.height));
+                    this.initItem_V();
+
+                        
+                }else{
+                    this.totalCols = Math.ceil(this.tableData.length / this.viewRows);
+                    this.scroll.maxMoveStep = this.totalCols - this.viewCols;
+                    if(this.showAll){this.viewCols = this.totalCols}
+                    this.worldSize = cc.size(Math.max(this.itemSize.width * this.totalCols + this.extraSpace,this.viewSize.width), this.viewSize.height);
+                    this.initItem_H();
+
+                }
+
+
                 this.scroll.setInnerContainerSize(this.worldSize);
+                if(this.dir ==ccui.ScrollView.DIR_VERTICAL){
+                    if(this.isRevert){
+                        this.scroll.jumpToBottom();
+                    }else{
+                        this.scroll.jumpToTop();
+                    }
+                }
 
-                cc.log("this.totalRows = " + this.totalRows);
-                cc.log("this.worldSize width = " + this.worldSize.width + " , height = " + this.worldSize.height);
+                cc.log("totalRows = " + this.totalRows + " , totalCols = " + this.totalCols);
+                cc.log("this.worldSize width = " + this.worldSize.width + " , height = " + this.worldSize.height + " v = " + JSON.stringify(this.scroll.getInnerContainerPosition()));
 
-                this.initItem();
+
             }
             
             return this;
 
         },
 
+        //----------------------
+
+        //--------------------------------
+
 
         getItem : function (index) {
             return this.itemsArr[index];
+        },
+
+        getItemList : function () {
+            return this.itemsArr;
         },
 
         /**
@@ -387,7 +555,99 @@ var component = component || {};
             return cc.rectContainsPoint(this.scrollBoundRect,pos);
         },
 
-        initItem : function () {
+        instanceItem : function (x,y,row,col,index) {
+            var item =   cc.pool.getFromPool(this.itemRender);
+            item.initConfig({
+                viewSize                : this.itemSize,
+                checkTouchInScrollView  : this.checkTouchInScrollView.bind(this),
+                onSelectCallFunc        : this.onSelectItem.bind(this),
+                showType                : this.showType,
+                showTime                : this.showTime
+            });
+
+            item.x = x;
+            item.y = y;
+            item.__col__ = col;
+            item.__row__ = row;
+            item.__recordePosition && item.__recordePosition();
+            item.setData && item.setData(this.tableData[index],index);
+            this.scroll.addChild(item);
+            this.itemsArr[this.itemsArr.length] = item;
+
+            cc.log("[baseItem] x = " + x + "  y = " + y + " row = " + row + "  col = " + col + " index = " + index + " visible = " + item.visible);
+
+            return index;
+
+        },
+
+        initItem_H : function () {
+            cc.log("[tableView ] size = " + this.tableData.length);
+            if(!this.tableData)return;
+            var datalen = this.tableData.length;
+            if(datalen == 0)return;
+            var cols = Math.min(this.viewCols + 1,this.totalCols);
+            var item = null;
+            var index = -1;
+            // cc.log("tableView initItem data = " + JSON.stringify(this.tableData))
+            loop:
+                for(var i = 0; i < cols; i++){
+                    for(var j = 0 ; j < this.viewRows;j++){
+
+                        // index = j + item.__col__ * i;
+                        index = j + i * this.viewRows;;
+                        this.instanceItem(i * this.itemSize.width,this.worldSize.height - (j + 1) * this.itemSize.height - this.extraSpace,j,i,index);
+                        if(index + 1 == datalen){
+                            break loop;
+                        }
+
+                        // item = cc.pool.getFromPool(this.itemRender);
+                        // item.initConfig({
+                        //     viewSize                : this.itemSize,
+                        //     checkTouchInScrollView  : this.checkTouchInScrollView.bind(this),
+                        //     onSelectCallFunc        : this.onSelectItem.bind(this),
+                        //     showType                : this.showType,
+                        //     showTime                : this.showTime
+                        // });
+                        //
+                        // item.x = i * this.itemSize.width;
+                        // item.y = this.worldSize.height - (j + 1) * this.itemSize.height - this.extraSpace;
+                        // item.__col__ = i;
+                        // item.__row__ = j;
+                        //
+                        // console.log("item.x + " + item.x + " item.y = " + item.y +  " , index = " + index + " , tot = " + datalen);
+                        // item.setData && item.setData(this.tableData[index],index);
+                        //
+                        // this.scroll.addChild(item);
+                        // this.itemsArr[this.itemsArr.length] = item;
+                        //
+                        // if(index + 1 == datalen){
+                        //     break loop;
+                        // }
+                    }
+                }
+
+            // this.scroll.jumpToLeft();
+
+            if(this.defaultIndex < this.itemsArr.length){
+                this.currentSelectItem = this.itemsArr[this.defaultIndex];
+                this.currentSelectItem.onSelect();
+            }
+
+            this.itemOffsetWidth = cols * this.itemSize.width;
+            this.renderCols = cols;
+
+            // this.scroll.jumpToLeft();
+
+
+            this.lastInnerPosX = this.scroll.getInnerContainerPosition().x;
+
+            // cc.log("[item] ---------------------------------------------------- " + (this.viewSize.height -
+
+            //cc.log("[tableView]  view:height = " + this.viewSize.height + " , worldSize:height = " + this.worldSize.height + " this.lastInnserPosY = " + this.lastInnerPosY);
+        },
+
+        initItem_V : function () {
+
             if(!this.tableData)return;
             var datalen = this.tableData.length;
             if(datalen == 0)return;
@@ -395,35 +655,64 @@ var component = component || {};
             var item = null;
             var index = -1;
             // cc.log("tableView initItem data = " + JSON.stringify(this.tableData))
-            loop:
-            for(var i = 0; i < rows; i++){
-                for(var j = 0 ; j < this.viewCols;j++){
-                    // item = new this.itemRender();
-                    item = cc.pool.getFromPool(this.itemRender);
-                    item.initConfig({
-                        viewSize                : this.itemSize,
-                        checkTouchInScrollView  : this.checkTouchInScrollView.bind(this),
-                        onSelectCallFunc        : this.onSelectItem.bind(this),
-                        showType                : this.showType,
-                        showTime                : this.showTime
-                    });
 
-                    item.x = j * this.itemSize.width;
-                    item.y = this.worldSize.height - (i + 1) * this.itemSize.height - this.extraSpace;
-                    // console.log("item.y = " + item.y +  " , len = " + (i * this.viewCols + j + 1) + " , tot = " + datalen);
-                    item.__col__ = j;
-                    item.__row__ = i;
-                    index = item.__row__ * this.viewCols + item.__col__;
-                    item.setData && item.setData(this.tableData[index],index);
 
-                    this.scroll.addChild(item);
-                    this.itemsArr[this.itemsArr.length] = item;
-
-                    if((i * this.viewCols + j + 1) == datalen){
-                        break loop;
+            if(this.isRevert){
+                var endRows = Math.max(0,this.totalRows - this.viewRows - 1);
+                cc.log("[baseItem] rows = " + rows + " ,end = " + endRows);
+                loop:
+                    for(var i = this.totalRows - 1 ; i >= endRows; i--) {
+                        for (var j = this.viewCols - 1; j >= 0; j--) {
+                            index = i * this.viewCols + j;
+                            if (index < datalen) {
+                                this.instanceItem(j * this.itemSize.width, this.worldSize.height - (i + 1) * this.itemSize.height - this.extraSpace, i, j, index);
+                            }
+                        }
                     }
-                }
+
+                // this.scroll.jumpToBottom();
+                // this.scroll.getInnerContainerPosition().y = 0;
+            }else{
+
+                loop:
+                    for(var i = 0; i < rows; i++){
+                        for(var j = 0 ; j < this.viewCols;j++){
+                            index  = i * this.viewCols + j;
+                            this.instanceItem(j * this.itemSize.width,this.worldSize.height - (i + 1) * this.itemSize.height - this.extraSpace,i,j,index);
+                            if(index + 1 == datalen){
+                                break loop;
+                            }
+
+                            // item = cc.pool.getFromPool(this.itemRender);
+                            // item.initConfig({
+                            //     viewSize                : this.itemSize,
+                            //     checkTouchInScrollView  : this.checkTouchInScrollView.bind(this),
+                            //     onSelectCallFunc        : this.onSelectItem.bind(this),
+                            //     showType                : this.showType,
+                            //     showTime                : this.showTime
+                            // });
+                            //
+                            // item.x = j * this.itemSize.width;
+                            // item.y = this.worldSize.height - (i + 1) * this.itemSize.height - this.extraSpace;
+                            // // console.log("item.y = " + item.y +  " , len = " + (i * this.viewCols + j + 1) + " , tot = " + datalen);
+                            // item.__col__ = j;
+                            // item.__row__ = i;
+                            // index = item.__row__ * this.viewCols + item.__col__;
+                            // item.setData && item.setData(this.tableData[index],index);
+                            //
+                            // this.scroll.addChild(item);
+                            // this.itemsArr[this.itemsArr.length] = item;
+                            //
+                            // if((i * this.viewCols + j + 1) == datalen){
+                            //     break loop;
+                            // }
+                        }
+                    }
+
+                // this.scroll.jumpToTop();
             }
+
+
 
             if(this.defaultIndex < this.itemsArr.length){
                 this.currentSelectItem = this.itemsArr[this.defaultIndex];
@@ -433,14 +722,14 @@ var component = component || {};
             this.itemOffsetHeight = rows * this.itemSize.height;
             this.renderRows = rows;
 
-            this.scroll.jumpToTop();
-            
-            
+            // this.scroll.jumpToTop();
+
+
             this.lastInnerPosY = this.scroll.getInnerContainerPosition().y;
 
-            // cc.log("[item] ---------------------------------------------------- " + (this.viewSize.height - 
-            
-            //cc.log("[tableView]  view:height = " + this.viewSize.height + " , worldSize:height = " + this.worldSize.height + " this.lastInnserPosY = " + this.lastInnerPosY);
+            // cc.log("[item] ---------------------------------------------------- " + (this.viewSize.height -
+
+            cc.log("[baseItem]  view:height = " + this.viewSize.height + " , worldSize:height = " + this.worldSize.height + " this.lastInnserPosY = " + this.lastInnerPosY);
         },
 
         onSelectItem : function (item,data) {
@@ -459,8 +748,10 @@ var component = component || {};
         //-------------------------------------
         onExit : function () {
             this._super();
-            this.itemsArr = null;
+            // this.itemsArr = null;
+            this.itemsArr.length = 0;
             this.tableData = null;
+            this.onSelectCallFunc = null;
 
             // this.unscheduleUpdate();
 
@@ -507,15 +798,18 @@ var component = component || {};
 
         __beforeResetData__ : function () {
             this.stopAllActions();
-            this.x = this.aniPoint.x;
-            this.y = this.aniPoint.y;
+            this.x = this.aniPoint ? this.aniPoint.x : 0;
+            this.y = this.aniPoint ? this.aniPoint.y : 0;
+        },
+
+        __recordePosition : function () {
+            this.aniPoint = cc.p(this.x,this.y);
         },
 
         setData : function (data,index) {
             this.data = data;
             this.index = index;
             this.visible = !!data || data == 0;
-            this.aniPoint = cc.p(this.x,this.y);
         },
 
         onEnter : function () {
@@ -592,6 +886,7 @@ var component = component || {};
             this.listener && cc.eventManager.removeListener(this.listener);
             this.listener = null;
             this.checkTouchInScrollView = null;
+            this.onSelectCallFunc = null;
         },
 
         /**
