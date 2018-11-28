@@ -1,9 +1,25 @@
 var tz = tz || {};
 
+<<<<<<< HEAD
 tz.ViewBase = cc.Node.extend({
 	RESOURCE_FILENAME : null,
 	RESOURCE_BINDING : null,
 
+=======
+/**
+ * 类属性
+ * RESOURCE_FILENAME : null,
+   RESOURCE_BINDING : null,
+ *  Example: RESOURCE_FILENAME = "main.json"
+ *  RESOURCE_BINDING = {"nameTf":
+ *  						{
+ *  							"varname":"",//可选
+ *  							"events":{"onClick":"methodName,"onTouch":true}//
+ *  				  }
+ *
+ */
+tianyi.ViewBase = cc.Node.extend({
+>>>>>>> 55191d255f59063a65b1e7782faaa8f2b80c255d
 	lastClickTime : -1,
 	VALID_CLICK_DETAL : 500,
 	
@@ -15,11 +31,11 @@ tz.ViewBase = cc.Node.extend({
 
 		defineProperty(this,"dispatcher",tz.events.IEvent.new());
 
-		if(this.RESOURCE_FILENAME != ""){
+		if(this.constructor.RESOURCE_FILENAME != null){
 			this.createResourceNode(this.RESOURCE_FILENAME);
 		}
 
-		if(this.RESOURCE_BINDING != ""){
+		if(this.constructor.RESOURCE_BINDING != null){
 			this.createResourceBinding(this.RESOURCE_BINDING);
 		}
 
@@ -85,29 +101,28 @@ tz.ViewBase = cc.Node.extend({
 			else{
 				this[nodeName] = node;
 			}
+			else{
+				this[nodeName] = node;
+			}
 
+			//配置事件
 			if(nodeBinding.hasOwnProperty("events")){
 				var events = nodeBinding.events;
-				var len = events.length;
-				for(var i = 0; i < len;i++){
-					var event = events[0];
-					//add click event
-					if(event.hasOwnProperty("onClick")){
-						if(event.hasOwnProperty("method")){
-							cc.assert(this[event.method],"ViewBase.createResourceBinding - can not find the bind mwthed that named " + event.method)
-							node.addClickEventListener(this[event.method].bind(this));
-						}
-						else{
-							node.addClickEventListener(this.onClick.bind(this,node));
-						}
 
-					}
-
-					//触摸事件
-					if(event.hasOwnProperty("onTouch")){
-						node.addTouchEventListener(this.onTouch.bind(this));
-					}
-				}
+                for(var key in event){
+                    if(key == "onClick"){
+                        //已经配了回调
+                        if(event[key]){
+                            node.addClickEventListener(this[event[key]].bind(this,node));
+                        }//用默认回调
+                        else{
+                            node.addClickEventListener(this.onClick.bind(this,node));
+                        }
+                    }
+                    else if(key == "onTouch"){
+                        node.addTouchEventListener(this.onTouch.bind(this));
+                    }
+                }
 			}
 
 		}
